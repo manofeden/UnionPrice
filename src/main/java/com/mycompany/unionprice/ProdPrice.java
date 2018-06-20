@@ -34,17 +34,6 @@ public class ProdPrice {
 		this.id = id;
 	}
 
-	public String getGroupId() {
-		StringBuffer bf = new StringBuffer();
-		bf.append(product_code);
-		bf.append(".");
-		bf.append(number);
-		bf.append(".");
-		bf.append(depart);
-
-		return bf.toString();
-	}
-
 	public String getProduct_code() {
 		return product_code;
 	}

@@ -20,16 +20,30 @@ public class UnionPrice {
 		// копируем все старые цены
 		listunion = new ArrayList<>(listold);
 
-		mapP = listold.stream().collect(Collectors.groupingBy(ProdPrice::getGroupId));
+		mapP = listold.stream().collect(Collectors.groupingBy(pp -> {
+			return makeGroupId(pp);
+		}));
 
 		addNewPrice();
+	}
+
+	// формируем идентификатор группы
+	private String makeGroupId(ProdPrice pp) {
+		StringBuffer bf = new StringBuffer();
+		bf.append(pp.getProduct_code());
+		bf.append(".");
+		bf.append(pp.getNumber());
+		bf.append(".");
+		bf.append(pp.getDepart());
+
+		return bf.toString();
 	}
 
 	private void addNewPrice() {
 		for (ProdPrice newPrice : listnew) {
 
 			// если товар не имеет цен
-			List<ProdPrice> listgroup = mapP.get(newPrice.getGroupId());
+			List<ProdPrice> listgroup = mapP.get(makeGroupId(newPrice));
 			if (listgroup == null) {
 				listunion.add(newPrice);
 				continue;

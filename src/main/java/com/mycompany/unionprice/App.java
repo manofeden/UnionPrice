@@ -7,14 +7,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-/**
- * Hello world!
- *
- */
+// Пример использования класса UnionPrice
 public class App {
-	static List<ProdPrice> listunion;
-	static List<ProdPrice> listold;
-
 	static Date dt(String strDate) {
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
 		LocalDateTime localDateTime = LocalDateTime.parse(strDate, formatter);
@@ -31,7 +25,7 @@ public class App {
 		ProdPrice ppn1 = new ProdPrice(1L, "122856", 2, 1, dt("15.01.2013 00:00:00"), dt("25.01.2013 23:59:59"), 92000L);
 		ProdPrice ppn2 = new ProdPrice(1L, "6654", 1, 2, dt("12.01.2013 00:00:00"), dt("13.01.2013 00:00:00"), 4000L);
 
-		listold = new ArrayList<>();
+		List<ProdPrice> listold = new ArrayList<>();
 		listold.add(pp0);
 		listold.add(pp1);
 		listold.add(pp2);

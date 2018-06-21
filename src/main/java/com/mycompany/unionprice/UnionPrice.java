@@ -9,76 +9,81 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 public class UnionPrice {
-	private List<ProdPrice> listnew;
-	private List<ProdPrice> listunion;
-	private Map<String, List<ProdPrice>> mapP;
+	private List<ProdPrice> listOld;
+	private List<ProdPrice> listNew;
+	private List<ProdPrice> listUnion;
+	private List<ProdPrice> listFilter;
+	private Map<String, List<ProdPrice>> mapPrice;
 	private boolean isNewPriceInserted;
 
-	public UnionPrice(List<ProdPrice> listold, List<ProdPrice> listnew) {
-		this.listnew = listnew;
+	long oldBegin, oldEnd, newBegin, newEnd;
+
+	public UnionPrice(List<ProdPrice> listOld, List<ProdPrice> listNew) {
+		this.listOld = listOld;
+		this.listNew = listNew;
 
 		// копируем все старые цены
-		listunion = new ArrayList<>(listold);
+		listUnion = new ArrayList<>(listOld);
 
-		mapP = listold.stream().collect(Collectors.groupingBy(pp -> {
+		doUnionPrice();
+	}
+
+	private void doUnionPrice() {
+		mapPrice = listOld.stream().collect(Collectors.groupingBy(pp -> {
 			return makeGroupId(pp);
 		}));
 
-		addNewPrice();
-	}
-
-	// формируем идентификатор группы
-	private String makeGroupId(ProdPrice pp) {
-		StringBuffer bf = new StringBuffer();
-		bf.append(pp.getProduct_code());
-		bf.append(".");
-		bf.append(pp.getNumber());
-		bf.append(".");
-		bf.append(pp.getDepart());
-
-		return bf.toString();
-	}
-
-	private void addNewPrice() {
-		for (ProdPrice newPrice : listnew) {
+		for (ProdPrice newPrice : listNew) {
 
 			// если товар не имеет цен
-			List<ProdPrice> listgroup = mapP.get(makeGroupId(newPrice));
-			if (listgroup == null) {
-				listunion.add(newPrice);
+			List<ProdPrice> listGroup = mapPrice.get(makeGroupId(newPrice));
+			if (listGroup == null) {
+				listUnion.add(newPrice);
 				continue;
 			}
 
 			// получаем список цен, где есть пересечение по периоду действия
-			List<ProdPrice> listfilter = listFilter(listgroup, newPrice);
+			listFilter = getListFilter(listGroup, newPrice);
 
 			// если старые цены не пересекаются в периодах действия с новыми ценами
-			if (listfilter.isEmpty()) {
-				listunion.add(newPrice);
+			if (listFilter.isEmpty()) {
+				listUnion.add(newPrice);
 				continue;
 			}
 
-			checkFilerList(listfilter, newPrice);
+			checkListFilter(newPrice);
 		}
 	}
 
-	private List<ProdPrice> listFilter(List<ProdPrice> listgroup, ProdPrice newPrice) {
+	// формируем идентификатор группы
+	private String makeGroupId(ProdPrice prodPrice) {
+		StringBuilder sb = new StringBuilder();
+		sb.append(prodPrice.getProduct_code());
+		sb.append(".");
+		sb.append(prodPrice.getNumber());
+		sb.append(".");
+		sb.append(prodPrice.getDepart());
+
+		return sb.toString();
+	}
+
+	private List<ProdPrice> getListFilter(List<ProdPrice> listgroup, ProdPrice newPrice) {
 		List<ProdPrice> filterlist = new ArrayList<>();
-		for (ProdPrice pp : listgroup) {
-			if (pp.getBegin().after(newPrice.getEnd()) || pp.getEnd().before(newPrice.getBegin())) {
+		for (ProdPrice prodPrice : listgroup) {
+			if (prodPrice.getBegin().after(newPrice.getEnd()) || prodPrice.getEnd().before(newPrice.getBegin())) {
 				continue;
 			}
 
-			filterlist.add(pp);
+			filterlist.add(prodPrice);
 		}
 
 		return filterlist;
 	}
 
 	//@formatter:off
-	private void checkFilerList(List<ProdPrice> listfilter, ProdPrice newPrice) {
+	private void checkListFilter(ProdPrice newPrice) {
 		isNewPriceInserted=false;
-		for (ProdPrice oldPrice : listfilter) {
+		for (ProdPrice oldPrice : listFilter) {
 			// могут быть разные id для одинаковых цен в старом и новом массиве цен
 			if (oldPrice.getProduct_code().equals(newPrice.getProduct_code())
 					&& oldPrice.getNumber().equals(newPrice.getNumber())
@@ -97,11 +102,11 @@ public class UnionPrice {
 	//@formatter:on
 
 	private boolean checkPrice(ProdPrice oldPrice, ProdPrice newPrice) {
-		long b_new = newPrice.getBegin().getTime();
-		long e_new = newPrice.getEnd().getTime();
+		oldBegin = oldPrice.getBegin().getTime();
+		oldEnd = oldPrice.getEnd().getTime();
 
-		long b_old = oldPrice.getBegin().getTime();
-		long e_old = oldPrice.getEnd().getTime();
+		newBegin = newPrice.getBegin().getTime();
+		newEnd = newPrice.getEnd().getTime();
 
 		// если значения цен одинаковы, то период действия цены увеличивается согласно
 		// периоду новой цены
@@ -111,7 +116,7 @@ public class UnionPrice {
 		}
 
 		// если период старой цены полностью перекрывается периодом новой цены
-		if ((b_old >= b_new & e_old <= e_new)) {
+		if ((oldBegin >= newBegin & oldEnd <= newEnd)) {
 			oldPrice.setValue(newPrice.getValue());
 			oldPrice.setBegin(newPrice.getBegin());
 			oldPrice.setEnd(newPrice.getEnd());
@@ -119,14 +124,14 @@ public class UnionPrice {
 		}
 
 		// если период новой цены начинается позже и заканчивается позже
-		if (b_old < b_new & e_old <= e_new) {
+		if (oldBegin < newBegin & oldEnd <= newEnd) {
 			insertNewPrice(newPrice);
 			oldPrice.setEnd(newPrice.getBegin());
 			return true;
 		}
 
 		// если период новой цены начинается раньше и заканчивается раньше
-		if (b_old > b_new & e_old > e_new) {
+		if (oldBegin > newBegin & oldEnd > newEnd) {
 			insertNewPrice(newPrice);
 			oldPrice.setBegin(newPrice.getEnd());
 			return true;
@@ -136,10 +141,10 @@ public class UnionPrice {
 		// добавляем новую цены, у старой уменьшаем конец действия и добавляем ещё одну
 		// цену со значение старой цены и периодом действия
 		// от конца новой цены до конца старой цены
-		if (b_old < b_new & e_old > e_new) {
+		if (oldBegin < newBegin & oldEnd > newEnd) {
 			insertNewPrice(newPrice);
 			ProdPrice pp1 = new ProdPrice(null, oldPrice.getProduct_code(), oldPrice.getNumber(), oldPrice.getDepart(), newPrice.getEnd(), oldPrice.getEnd(), oldPrice.getValue());
-			listunion.add(pp1);
+			listUnion.add(pp1);
 			oldPrice.setEnd(newPrice.getBegin());
 			return true;
 		}
@@ -149,14 +154,14 @@ public class UnionPrice {
 
 	private void insertNewPrice(ProdPrice newPrice) {
 		if (!isNewPriceInserted) {
-			listunion.add(newPrice);
+			listUnion.add(newPrice);
 		}
 	}
 
 	private Comparator<ProdPrice> BeginComparator = new Comparator<ProdPrice>() {
-		public int compare(ProdPrice pp1, ProdPrice pp2) {
-			Long t1 = pp1.getBegin().getTime();
-			Long t2 = pp2.getBegin().getTime();
+		public int compare(ProdPrice prodPrice1, ProdPrice prodPrice2) {
+			Long t1 = prodPrice1.getBegin().getTime();
+			Long t2 = prodPrice2.getBegin().getTime();
 
 			// ascending order
 			return t1.compareTo(t2);
@@ -164,9 +169,9 @@ public class UnionPrice {
 	};
 
 	private Comparator<ProdPrice> CodeComparator = new Comparator<ProdPrice>() {
-		public int compare(ProdPrice pp1, ProdPrice pp2) {
-			String code1 = pp1.getProduct_code();
-			String code2 = pp2.getProduct_code();
+		public int compare(ProdPrice prodPrice1, ProdPrice prodPrice2) {
+			String code1 = prodPrice1.getProduct_code();
+			String code2 = prodPrice2.getProduct_code();
 
 			// ascending order
 			return code1.compareTo(code2);
@@ -174,38 +179,38 @@ public class UnionPrice {
 	};
 
 	public List<ProdPrice> getListunion() {
-		return listunion;
+		return listUnion;
 	}
 
 	public List<ProdPrice> getListunionSortByBegin() {
-		Collections.sort(listunion, BeginComparator);
-		return listunion;
+		Collections.sort(listUnion, BeginComparator);
+		return listUnion;
 	}
 
 	public List<ProdPrice> getListunionSortByCode() {
-		Collections.sort(listunion, CodeComparator);
-		return listunion;
+		Collections.sort(listUnion, CodeComparator);
+		return listUnion;
 	}
 
 	public void printUnionList() {
 		SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
-		for (ProdPrice pp : listunion) {
-			StringBuilder bf = new StringBuilder();
-			bf.append(pp.getId());
-			bf.append(" ");
-			bf.append(pp.getProduct_code());
-			bf.append(" ");
-			bf.append(pp.getNumber());
-			bf.append(" ");
-			bf.append(pp.getDepart());
-			bf.append(" ");
-			bf.append(sdf.format(pp.getBegin()));
-			bf.append(" ");
-			bf.append(sdf.format(pp.getEnd()));
-			bf.append(" ");
-			bf.append(pp.getValue());
-			bf.append(" ");
-			System.out.println(bf);
+		for (ProdPrice prodPrice : listUnion) {
+			StringBuilder sb = new StringBuilder();
+			sb.append(prodPrice.getId());
+			sb.append(" ");
+			sb.append(prodPrice.getProduct_code());
+			sb.append(" ");
+			sb.append(prodPrice.getNumber());
+			sb.append(" ");
+			sb.append(prodPrice.getDepart());
+			sb.append(" ");
+			sb.append(sdf.format(prodPrice.getBegin()));
+			sb.append(" ");
+			sb.append(sdf.format(prodPrice.getEnd()));
+			sb.append(" ");
+			sb.append(prodPrice.getValue());
+			sb.append(" ");
+			System.out.println(sb);
 		}
 	}
 }

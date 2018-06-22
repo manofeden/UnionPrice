@@ -1,8 +1,5 @@
 package com.mycompany.unionprice;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -13,15 +10,12 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class UnionPriceTest {
-	private static List<ProdPrice> listold;
-	private static List<ProdPrice> listnew;
 	private static UnionPrice up;
 
+	// название не соответствует конвенции java code style conventions, и можно было
+	// бы без этого метода обходиться, но так нагляднее в тестах
 	static Date dt(String strDate) {
-		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
-		LocalDateTime localDateTime = LocalDateTime.parse(strDate, formatter);
-		ZoneId defaultZoneId = ZoneId.systemDefault();
-		return Date.from(localDateTime.atZone(defaultZoneId).toInstant());
+		return TestUtils.makeDate(strDate);
 	}
 
 	@BeforeClass
@@ -34,12 +28,12 @@ public class UnionPriceTest {
 		ProdPrice ppn1 = new ProdPrice(1L, "122856", 2, 1, dt("15.01.2013 00:00:00"), dt("25.01.2013 23:59:59"), 92000L);
 		ProdPrice ppn2 = new ProdPrice(1L, "6654", 1, 2, dt("12.01.2013 00:00:00"), dt("13.01.2013 00:00:00"), 4000L);
 
-		listold = new ArrayList<>();
+		List<ProdPrice> listold = new ArrayList<>();
 		listold.add(pp0);
 		listold.add(pp1);
 		listold.add(pp2);
 
-		listnew = new ArrayList<>();
+		List<ProdPrice> listnew = new ArrayList<>();
 		listnew.add(ppn0);
 		listnew.add(ppn1);
 		listnew.add(ppn2);

@@ -4,6 +4,8 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -23,7 +25,8 @@ public class UnionPrice {
 		this.listNew = listNew;
 
 		// копируем все старые цены
-		listUnion = new ArrayList<>(listOld);
+		listUnion = new LinkedList<>(listOld);
+		mapPrice = new HashMap<>();
 
 		doUnionPrice();
 	}
@@ -83,6 +86,7 @@ public class UnionPrice {
 	//@formatter:off
 	private void checkListFilter(ProdPrice newPrice) {
 		isNewPriceInserted=false;
+		
 		for (ProdPrice oldPrice : listFilter) {
 			// могут быть разные id для одинаковых цен в старом и новом массиве цен
 			if (oldPrice.getProduct_code().equals(newPrice.getProduct_code())
@@ -94,51 +98,50 @@ public class UnionPrice {
 				continue;
 			}
 			
-			if (checkPrice(oldPrice, newPrice)) {
-				isNewPriceInserted=true;
+			// если значения цен одинаковы, то период действия цены увеличивается согласно
+			// периоду новой цены
+			if (oldPrice.getValue().equals(newPrice.getValue())) {				
+				oldPrice.setEnd(newPrice.getEnd());	
+				continue;				
 			}
+			
+			checkPeriod(oldPrice, newPrice);			
+
 		}
 	}
 	//@formatter:on
 
-	private boolean checkPrice(ProdPrice oldPrice, ProdPrice newPrice) {
+	private void checkPeriod(ProdPrice oldPrice, ProdPrice newPrice) {
 		oldBegin = oldPrice.getBegin().getTime();
 		oldEnd = oldPrice.getEnd().getTime();
 
 		newBegin = newPrice.getBegin().getTime();
 		newEnd = newPrice.getEnd().getTime();
 
-		// если значения цен одинаковы, то период действия цены увеличивается согласно
-		// периоду новой цены
-		if (oldPrice.getValue().equals(newPrice.getValue())) {
-			oldPrice.setEnd(newPrice.getEnd());
-			return false;
-		}
-
 		// если период старой цены полностью перекрывается периодом новой цены
 		if ((oldBegin >= newBegin & oldEnd <= newEnd)) {
 			oldPrice.setValue(newPrice.getValue());
 			oldPrice.setBegin(newPrice.getBegin());
 			oldPrice.setEnd(newPrice.getEnd());
-			return false;
+			return;
 		}
 
 		// если период новой цены начинается позже и заканчивается позже
 		if (oldBegin < newBegin & oldEnd <= newEnd) {
 			insertNewPrice(newPrice);
 			oldPrice.setEnd(newPrice.getBegin());
-			return true;
+			return;
 		}
 
 		// если период новой цены начинается раньше и заканчивается раньше
 		if (oldBegin > newBegin & oldEnd > newEnd) {
 			insertNewPrice(newPrice);
 			oldPrice.setBegin(newPrice.getEnd());
-			return true;
+			return;
 		}
 
 		// если период новой цены попадает внутрь периода старой цены, то
-		// добавляем новую цены, у старой уменьшаем конец действия и добавляем ещё одну
+		// добавляем новую цену, у старой уменьшаем конец действия и добавляем ещё одну
 		// цену со значение старой цены и периодом действия
 		// от конца новой цены до конца старой цены
 		if (oldBegin < newBegin & oldEnd > newEnd) {
@@ -146,15 +149,13 @@ public class UnionPrice {
 			ProdPrice pp1 = new ProdPrice(null, oldPrice.getProduct_code(), oldPrice.getNumber(), oldPrice.getDepart(), newPrice.getEnd(), oldPrice.getEnd(), oldPrice.getValue());
 			listUnion.add(pp1);
 			oldPrice.setEnd(newPrice.getBegin());
-			return true;
 		}
-
-		return false;
 	}
 
 	private void insertNewPrice(ProdPrice newPrice) {
 		if (!isNewPriceInserted) {
 			listUnion.add(newPrice);
+			isNewPriceInserted = true;
 		}
 	}
 

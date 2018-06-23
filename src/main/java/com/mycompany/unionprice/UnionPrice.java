@@ -15,6 +15,7 @@ public class UnionPrice {
 	private List<ProdPrice> listNew;
 	private List<ProdPrice> listUnion;
 	private List<ProdPrice> listFilter;
+	private List<ProdPrice> listToDelete;
 	private Map<String, List<ProdPrice>> mapPrice;
 	private boolean isNewPriceInserted;
 
@@ -26,6 +27,7 @@ public class UnionPrice {
 
 		// копируем все старые цены
 		listUnion = new LinkedList<>(listOld);
+		listToDelete = new LinkedList<>();
 		mapPrice = new HashMap<>();
 
 		doUnionPrice();
@@ -56,6 +58,11 @@ public class UnionPrice {
 
 			checkListFilter(newPrice);
 		}
+
+		// удаляем цены помеченные к удалению
+		if (!listToDelete.isEmpty()) {
+			listUnion.removeAll(listToDelete);
+		}
 	}
 
 	// формируем идентификатор группы
@@ -85,7 +92,7 @@ public class UnionPrice {
 
 	//@formatter:off
 	private void checkListFilter(ProdPrice newPrice) {
-		isNewPriceInserted=false;
+		isNewPriceInserted=false;		
 		
 		for (ProdPrice oldPrice : listFilter) {
 			// могут быть разные id для одинаковых цен в старом и новом массиве цен
@@ -96,20 +103,31 @@ public class UnionPrice {
 					&& oldPrice.getEnd().equals(newPrice.getEnd())
 					&& oldPrice.getValue().equals(newPrice.getValue())) {
 				continue;
-			}
+			}			
 			
-			// если значения цен одинаковы, то период действия цены увеличивается согласно
-			// периоду новой цены
 			if (oldPrice.getValue().equals(newPrice.getValue())) {				
-				oldPrice.setEnd(newPrice.getEnd());	
+				unionPeriod(oldPrice, newPrice);
 				continue;				
 			}
 			
-			checkPeriod(oldPrice, newPrice);			
-
+			checkPeriod(oldPrice, newPrice);
 		}
 	}
 	//@formatter:on
+
+	// если значения цен одинаковы, то период действия цены увеличивается согласно
+	// периоду новой цены
+	private void unionPeriod(ProdPrice oldPrice, ProdPrice newPrice) {
+		if (newPrice.getBegin().before(oldPrice.getBegin())) {
+			oldPrice.setBegin(newPrice.getBegin());
+		}
+
+		if (newPrice.getEnd().after(oldPrice.getEnd())) {
+			oldPrice.setEnd(newPrice.getEnd());
+		}
+
+		isNewPriceInserted = true;
+	}
 
 	private void checkPeriod(ProdPrice oldPrice, ProdPrice newPrice) {
 		oldBegin = oldPrice.getBegin().getTime();
@@ -120,9 +138,10 @@ public class UnionPrice {
 
 		// если период старой цены полностью перекрывается периодом новой цены
 		if ((oldBegin >= newBegin & oldEnd <= newEnd)) {
-			oldPrice.setValue(newPrice.getValue());
-			oldPrice.setBegin(newPrice.getBegin());
-			oldPrice.setEnd(newPrice.getEnd());
+			insertNewPrice(newPrice);
+
+			// добавляем старую цену в список удаляемых цен
+			listToDelete.add(oldPrice);
 			return;
 		}
 

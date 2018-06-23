@@ -43,13 +43,13 @@ public class UnionPriceTest6 {
 	}
 
 	@Test
-	public void testGetListunionSortByBegin() {
+	public void testGetListunion() {
 		List<ProdPrice> list = new ArrayList<>();
-		list.add(new ProdPrice(1L, "100", 1, 1, dt("01.01.2001 00:00:00"), dt("12.01.2001 00:00:00"), 100L));
-		list.add(new ProdPrice(1L, "100", 1, 1, dt("12.01.2001 00:00:00"), dt("20.01.2001 23:59:59"), 110L));
-		list.add(new ProdPrice(1L, "100", 1, 1, dt("21.01.2001 00:00:00"), dt("31.01.2001 23:59:59"), 120L));
+		list.add(new ProdPrice(1L, "100", 1, 1, dt("01.01.2001 00:00:00"), dt("15.01.2001 00:00:00"), 80L));
+		list.add(new ProdPrice(1L, "100", 1, 1, dt("25.01.2001 23:59:59"), dt("31.01.2001 23:59:59"), 90L));
+		list.add(new ProdPrice(1L, "100", 1, 1, dt("15.01.2001 00:00:00"), dt("25.01.2001 23:59:59"), 85L));
 
-		Assert.assertTrue(list.equals(up.getListunionSortByBegin()));
+		Assert.assertTrue(list.equals(up.getListunion()));
 	}
 
 	@AfterClass

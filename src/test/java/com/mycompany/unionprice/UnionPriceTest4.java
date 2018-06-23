@@ -37,7 +37,7 @@ public class UnionPriceTest4 {
 	}
 
 	@Test
-	public void testGetListunionSortByBegin() {
+	public void testGetListunion() {
 		List<ProdPrice> list = new ArrayList<>();
 		list.add(new ProdPrice(1L, "100", 1, 1, dt("01.01.2001 00:00:00"), dt("12.01.2001 00:00:00"), 7000L));
 		list.add(new ProdPrice(1L, "100", 1, 1, dt("12.01.2001 00:00:00"), dt("15.01.2001 23:59:59"), 5000L));

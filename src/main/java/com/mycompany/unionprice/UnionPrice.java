@@ -22,6 +22,21 @@ public class UnionPrice {
 	long oldBegin, oldEnd, newBegin, newEnd;
 
 	public UnionPrice(List<ProdPrice> listOld, List<ProdPrice> listNew) {
+
+		if (listOld == null || listNew == null) {
+			return;
+		}
+
+		if (listOld.isEmpty()) {
+			listUnion = listNew;
+			return;
+		}
+
+		if (listNew.isEmpty()) {
+			listUnion = listOld;
+			return;
+		}
+
 		this.listOld = listOld;
 		this.listNew = listNew;
 
